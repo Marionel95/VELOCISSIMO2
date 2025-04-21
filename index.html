@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VELOCISSIMOOO</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    .container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: 20px auto;
+    }
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      color: green;
+    }
+    label {
+      font-size: 16px;
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .navbar {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .navbar button {
+      margin: 5px;
+      background-color: #f1c40f;
+      color: black;
+    }
+    .result, .notification {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .result {
+      font-weight: bold;
+      color: green;
+    }
+    .notification {
+      color: red;
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .history-table th, .history-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    .history-table th {
+      background-color: #f9f9f9;
+    }
+    .buttons-group {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <button onclick="mostraInserimento()">Inserimento Dati</button>
+    <button onclick="mostraCronologia()">Cronologia</button>
+  </div>
+
+  <div class="container" id="sezione-inserimento">
+    <h1>VELOCISSIMOOO</h1>
+    <label for="locale">Nome Locale</label>
+    <input type="text" id="locale" placeholder="Inserisci nome locale" />
+
+    <label for="importo">Importo</label>
+    <input type="number" id="importo" placeholder="Inserisci importo" min="0" />
+
+    <label for="delivery-cost">Costo della Consegna</label>
+    <select id="delivery-cost">
+      <option value="3.50">€3,50</option>
+      <option value="4.00">€4,00</option>
+      <option value="4.50">€4,50</option>
+      <option value="5.00">€5,00</option>
+    </select>
+
+    <label><input type="checkbox" id="apply-percentage" checked /> Applicare il 10%?</label>
+
+    <button onclick="confermaCalcolo()">Calcola Guadagno</button>
+    <div class="result" id="guadagno"></div>
+    <div class="notification" id="notification"></div>
+    <button onclick="apriManuale()">Manuale</button>
+  </div>
+
+  <div class="container" id="sezione-cronologia" style="display:none;">
+    <h2>Cronologia</h2>
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Locale</th>
+          <th>Data</th>
+          <th>Importo</th>
+          <th>Guadagno</th>
+          <th>10%</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+    <div class="buttons-group">
+      <button onclick="scaricaPDF()">Scarica PDF</button>
+      <button onclick="eliminaCronologia()">Elimina Cronologia</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    function mostraInserimento() {
+      document.getElementById("sezione-inserimento").style.display = "block";
+      document.getElementById("sezione-cronologia").style.display = "none";
+    }
+
+    function mostraCronologia() {
+      document.getElementById("sezione-inserimento").style.display = "none";
+      document.getElementById("sezione-cronologia").style.display = "block";
+    }
+
+    function confermaCalcolo() {
+      if (confirm("Vuoi calcolare il guadagno?")) {
+        calcolaGuadagno();
+      }
+    }
+
+    function calcolaGuadagno() {
+      const date = new Date().toLocaleDateString();
+      const locale = document.getElementById("locale").value;
+      const importo = parseFloat(document.getElementById("importo").value);
+      const deliveryCost = parseFloat(document.getElementById("delivery-cost").value);
+      const applyPercentage = document.getElementById("apply-percentage").checked;
+      const guadagno = (applyPercentage ? importo * 0.1 : 0) + deliveryCost;
+
+      if (!locale || isNaN(importo)) {
+        document.getElementById("notification").innerText = "Compila tutti i campi.";
+        return;
+      }
+
+      document.getElementById("guadagno").innerText = `Totale Guadagno: €${guadagno.toFixed(2)}`;
+      document.getElementById("notification").innerText = "";
+      aggiungiAllaCronologia(locale, date, importo, guadagno, applyPercentage ? "Sì" : "No");
+      resettaCampi();
+    }
+
+    function aggiungiAllaCronologia(locale, date, importo, guadagno, applyPercentage) {
+      const historyBody = document.getElementById("history-body");
+      const newRow = document.createElement("tr");
+      newRow.innerHTML = `
+        <td>${locale}</td>
+        <td>${date}</td>
+        <td>€${importo.toFixed(2)}</td>
+        <td>€${guadagno.toFixed(2)}</td>
+        <td>${applyPercentage}</td>
+        <td><button onclick="rimuoviRiga(this)">Elimina</button></td>
+      `;
+      historyBody.appendChild(newRow);
+      salvaInLocalStorage();
+    }
+
+    function rimuoviRiga(button) {
+      button.closest("tr").remove();
+      salvaInLocalStorage();
+    }
+
+    function salvaInLocalStorage() {
+      const rows = document.querySelectorAll("#history-body tr");
+      const history = [];
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        history.push({
+          locale: cells[0].innerText,
+          date: cells[1].innerText,
+          importo: parseFloat(cells[2].innerText.replace("€", "")),
+          guadagno: parseFloat(cells[3].innerText.replace("€", "")),
+          applyPercentage: cells[4].innerText
+        });
+      });
+
+      localStorage.setItem("history", JSON.stringify(history));
+    }
+
+    function caricaCronologia() {
+      const history = JSON.parse(localStorage.getItem("history")) || [];
+      const historyBody = document.getElementById("history-body");
+      historyBody.innerHTML = "";
+      history.forEach(item => aggiungiAllaCronologia(item.locale, item.date, item.importo, item.guadagno, item.applyPercentage));
+    }
+
+    function eliminaCronologia() {
+      if (confirm("Vuoi cancellare tutta la cronologia?")) {
+        localStorage.removeItem("history");
+        caricaCronologia();
+      }
+    }
+
+    function apriManuale() {
+      const importo = prompt("Inserisci un importo manuale:");
+      if (importo) {
+        const locale = document.getElementById("locale").value || "Manuale";
+        const date = new Date().toLocaleDateString();
+        const guadagno = parseFloat(importo);
+        aggiungiAllaCronologia(locale, date, guadagno, guadagno, "No");
+      }
+    }
+
+    function scaricaPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const rows = document.querySelectorAll("#history-body tr");
+      let totalGuadagno = 0;
+
+      doc.text(`VELOCISSIMOOO - ${new Date().toLocaleDateString()}`, 10, 10);
+      let y = 20;
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        const line = `${cells[1].innerText} - ${cells[0].innerText} - €${cells[2].innerText} - Guadagno: ${cells[3].innerText} (${cells[4].innerText})`;
+        doc.text(line, 10, y);
+        y += 10;
+        totalGuadagno += parseFloat(cells[3].innerText.replace("€", ""));
+      });
+
+      doc.text(`Totale Guadagno: €${totalGuadagno.toFixed(2)}`, 10, y);
+      doc.save(`VELOCISSIMOOO_${new Date().toLocaleDateString()}.pdf`);
+    }
+
+    function resettaCampi() {
+      document.getElementById("locale").value = "";
+      document.getElementById("importo").value = "";
+      document.getElementById("delivery-cost").value = "3.50";
+      document.getElementById("apply-percentage").checked = true;
+      document.getElementById("guadagno").innerText = "";
+      document.getElementById("notification").innerText = "";
+    }
+
+    window.onload = caricaCronologia;
+  </script>
+</body>
+</html>
